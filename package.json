@@ -1,0 +1,39 @@
+{
+  "name": "bank-saving-system",
+  "version": "1.0.0",
+  "description": "Full-stack bank saving system with deposito calculation - Belimbing.ai Engineering Test",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend"
+  ],
+  "scripts": {
+    "dev": "npm-run-all --parallel dev:backend dev:frontend",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm-run-all build:backend build:frontend",
+    "build:backend": "npm run build --workspace=backend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "start:backend": "npm run start --workspace=backend",
+    "start:frontend": "npm run start --workspace=frontend",
+    "prisma:generate": "npm run prisma:generate --workspace=backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:studio": "npm run prisma:studio --workspace=backend"
+  },
+  "keywords": [
+    "bank",
+    "saving",
+    "deposito",
+    "monorepo",
+    "typescript",
+    "nextjs",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "npm-run-all": "^4.1.5"
+  }
+}
