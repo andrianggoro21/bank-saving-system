@@ -1,0 +1,37 @@
+{
+  "id": "bank-saving-dev",
+  "name": "Bank Saving - Development",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "customer_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "account_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "deposito_type_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment"
+}

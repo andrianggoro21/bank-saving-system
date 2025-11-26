@@ -1,0 +1,963 @@
+{
+  "info": {
+    "name": "Bank Saving System API",
+    "description": "Complete API collection for Bank Saving System with deposito calculation features.\n\n## Features\n- Customer Management\n- Deposito Type Management\n- Account Management\n- Deposit & Withdrawal with automatic interest calculation\n\n## Environment Variables\nMake sure to import the environment file: `06-postman-environment.json`\n\n## Test Flow\n1. Create Customer\n2. Create Deposito Type\n3. Create Account\n4. Deposit Money\n5. Calculate Withdrawal Preview\n6. Withdraw Money",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "Get All Customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has success true\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has data array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Save first customer ID for later use",
+                  "if (pm.response.json().data.length > 0) {",
+                  "    pm.environment.set(\"customer_id\", pm.response.json().data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customers?page=1&limit=10&sort=name&order=asc",
+              "host": ["{{base_url}}"],
+              "path": ["customers"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": "john",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "name"
+                },
+                {
+                  "key": "order",
+                  "value": "asc"
+                }
+              ]
+            },
+            "description": "Get paginated list of customers with optional search and sorting"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Customer by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer has accounts array\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.accounts).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customers/{{customer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            },
+            "description": "Get customer detail with all accounts"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('name');",
+                  "});",
+                  "",
+                  "// Save customer_id to environment",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"customer_id\", jsonData.data.id);",
+                  "console.log(\"Created customer ID:\", jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            },
+            "description": "Create new customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Customer updated successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe Updated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customers/{{customer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            },
+            "description": "Update existing customer"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200 or 409\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 409) {",
+                  "    pm.test(\"Cannot delete customer with accounts\", function () {",
+                  "        var jsonData = pm.response.json();",
+                  "        pm.expect(jsonData.error.code).to.eql('CUSTOMER_HAS_ACCOUNTS');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/customers/{{customer_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["customers", "{{customer_id}}"]
+            },
+            "description": "Delete customer (only if no active accounts)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Deposito Types",
+      "item": [
+        {
+          "name": "Get All Deposito Types",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response has deposito types\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "// Save first deposito type ID",
+                  "if (pm.response.json().data.length > 0) {",
+                  "    pm.environment.set(\"deposito_type_id\", pm.response.json().data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/deposito-types",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types"]
+            },
+            "description": "Get all deposito types (master data)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Deposito Type by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/deposito-types/{{deposito_type_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types", "{{deposito_type_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Deposito Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Deposito type created\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.monthly_return).to.exist;",
+                  "});",
+                  "",
+                  "// Save deposito_type_id",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"deposito_type_id\", jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gold\",\n  \"yearly_return\": 7.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/deposito-types",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types"]
+            },
+            "description": "Create new deposito type"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Deposito Type",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gold Premium\",\n  \"yearly_return\": 7.50\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/deposito-types/{{deposito_type_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types", "{{deposito_type_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Deposito Type",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/deposito-types/{{deposito_type_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types", "{{deposito_type_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "Get All Accounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Save first account ID",
+                  "if (pm.response.json().data.length > 0) {",
+                  "    pm.environment.set(\"account_id\", pm.response.json().data[0].id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["accounts"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "customer_id",
+                  "value": "{{customer_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "deposito_type_id",
+                  "value": "{{deposito_type_id}}",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Account by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Account has transactions\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.transactions).to.be.an('array');",
+                  "    pm.expect(jsonData.data.statistics).to.exist;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/{{account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", "{{account_id}}"]
+            },
+            "description": "Get account detail with transaction history"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Account created successfully\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.balance).to.exist;",
+                  "});",
+                  "",
+                  "// Save account_id",
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"account_id\", jsonData.data.id);",
+                  "console.log(\"Created account ID:\", jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"deposito_type_id\": {{deposito_type_id}},\n  \"initial_balance\": 50000000.00,\n  \"initial_deposit_date\": \"2025-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts",
+              "host": ["{{base_url}}"],
+              "path": ["accounts"]
+            },
+            "description": "Create new account with optional initial deposit"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Account",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deposito_type_id\": {{deposito_type_id}}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts/{{account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", "{{account_id}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/accounts/{{account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["accounts", "{{account_id}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/transactions?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["transactions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "account_id",
+                  "value": "{{account_id}}",
+                  "disabled": true
+                },
+                {
+                  "key": "type",
+                  "value": "deposit",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Deposit Money",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Deposit successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.transaction.type).to.eql('deposit');",
+                  "    pm.expect(jsonData.data.account.balance).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Balance updated correctly\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedBalance = jsonData.data.transaction.balance_before + jsonData.data.transaction.amount;",
+                  "    pm.expect(jsonData.data.transaction.balance_after).to.eql(expectedBalance);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"amount\": 10000000.00,\n  \"transaction_date\": \"2025-11-22\",\n  \"notes\": \"Monthly deposit\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/deposit",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "deposit"]
+            },
+            "description": "Deposit money to account"
+          },
+          "response": []
+        },
+        {
+          "name": "Calculate Withdrawal Preview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Calculation includes all required fields\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var calc = jsonData.data.calculation;",
+                  "    pm.expect(calc.starting_balance).to.exist;",
+                  "    pm.expect(calc.ending_balance).to.exist;",
+                  "    pm.expect(calc.interest_earned).to.exist;",
+                  "    pm.expect(calc.months_duration).to.exist;",
+                  "    pm.expect(calc.monthly_return_rate).to.exist;",
+                  "});",
+                  "",
+                  "pm.test(\"Interest earned is positive\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.calculation.interest_earned).to.be.above(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Ending balance > Starting balance\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var calc = jsonData.data.calculation;",
+                  "    pm.expect(calc.ending_balance).to.be.above(calc.starting_balance);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"withdrawal_date\": \"2025-11-22\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/calculate-withdrawal",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "calculate-withdrawal"]
+            },
+            "description": "Calculate withdrawal preview with interest calculation (CRITICAL ENDPOINT)"
+          },
+          "response": []
+        },
+        {
+          "name": "Withdraw Money",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"Withdrawal successful\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.success).to.eql(true);",
+                  "    pm.expect(jsonData.data.transaction.type).to.eql('withdraw');",
+                  "});",
+                  "",
+                  "pm.test(\"Account balance is 0 after withdrawal\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.account.balance).to.eql(0);",
+                  "    pm.expect(jsonData.data.transaction.balance_after).to.eql(0);",
+                  "});",
+                  "",
+                  "pm.test(\"Calculation details present\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data.calculation_details).to.exist;",
+                  "    pm.expect(jsonData.data.calculation_details.interest_earned).to.be.above(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"withdrawal_date\": \"2025-11-22\",\n  \"notes\": \"Account closure\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/withdraw",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "withdraw"]
+            },
+            "description": "Withdraw money with automatic interest calculation"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Complete Test Flow",
+      "item": [
+        {
+          "name": "1. Create Customer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"customer_id\", jsonData.data.id);",
+                  "console.log(\"✅ Step 1: Customer created, ID =\", jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User Flow\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/customers",
+              "host": ["{{base_url}}"],
+              "path": ["customers"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2. Create Deposito Type",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"deposito_type_id\", jsonData.data.id);",
+                  "console.log(\"✅ Step 2: Deposito type created, ID =\", jsonData.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Gold\",\n  \"yearly_return\": 7.00\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/deposito-types",
+              "host": ["{{base_url}}"],
+              "path": ["deposito-types"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3. Create Account with Initial Deposit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "pm.environment.set(\"account_id\", jsonData.data.id);",
+                  "console.log(\"✅ Step 3: Account created, ID =\", jsonData.data.id);",
+                  "console.log(\"   Balance:\", jsonData.data.balance);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customer_id\": {{customer_id}},\n  \"deposito_type_id\": {{deposito_type_id}},\n  \"initial_balance\": 50000000.00,\n  \"initial_deposit_date\": \"2025-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/accounts",
+              "host": ["{{base_url}}"],
+              "path": ["accounts"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4. Add More Deposit",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "console.log(\"✅ Step 4: Deposit added\");",
+                  "console.log(\"   New Balance:\", jsonData.data.account.balance);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"amount\": 10000000.00,\n  \"transaction_date\": \"2025-06-01\",\n  \"notes\": \"Additional deposit\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/deposit",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "deposit"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5. Calculate Withdrawal Preview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "var calc = jsonData.data.calculation;",
+                  "console.log(\"✅ Step 5: Withdrawal calculation\");",
+                  "console.log(\"   Starting Balance:\", calc.starting_balance);",
+                  "console.log(\"   Duration:\", calc.duration.total_months_decimal, \"months\");",
+                  "console.log(\"   Interest Earned:\", calc.interest_earned);",
+                  "console.log(\"   Ending Balance:\", calc.ending_balance);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"withdrawal_date\": \"2025-11-22\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/calculate-withdrawal",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "calculate-withdrawal"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6. Withdraw Money",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "console.log(\"✅ Step 6: Withdrawal completed\");",
+                  "console.log(\"   Total Received:\", jsonData.data.calculation_details.total_received);",
+                  "console.log(\"   Final Balance:\", jsonData.data.account.balance);",
+                  "console.log(\"\");",
+                  "console.log(\"🎉 COMPLETE TEST FLOW FINISHED SUCCESSFULLY!\");"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{account_id}},\n  \"withdrawal_date\": \"2025-11-22\",\n  \"notes\": \"Complete test flow - account closure\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/transactions/withdraw",
+              "host": ["{{base_url}}"],
+              "path": ["transactions", "withdraw"]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Run this folder with Collection Runner to test the complete flow:\n1. Create Customer\n2. Create Deposito Type\n3. Create Account\n4. Deposit Money\n5. Calculate Withdrawal\n6. Withdraw Money"
+    }
+  ]
+}

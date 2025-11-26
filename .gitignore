@@ -38,5 +38,5 @@ Thumbs.db
 .cache/
 
 # Documentation
-/docs
+# /docs
 /docs-dev

@@ -1,0 +1,1421 @@
+openapi: 3.0.3
+info:
+  title: Bank Saving System API
+  description: |
+    REST API untuk Bank Saving System dengan fitur deposito dan perhitungan bunga.
+
+    ## Features
+    - Customer Management (CRUD)
+    - Deposito Type Management (CRUD)
+    - Account Management (CRUD)
+    - Deposit & Withdrawal dengan perhitungan bunga otomatis
+
+    ## Tech Stack
+    - Backend: Express.js + TypeScript
+    - ORM: Prisma
+    - Database: PostgreSQL / MySQL
+
+    ## Calculation Formula
+    ```
+    ending_balance = starting_balance × (1 + monthly_return × months)
+    monthly_return = yearly_return / 12 / 100
+    ```
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@belimbing.ai
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://bank-saving.yourdomain.com/api/v1
+    description: Production server
+
+tags:
+  - name: Customers
+    description: Customer management endpoints
+  - name: Deposito Types
+    description: Deposito type management endpoints
+  - name: Accounts
+    description: Account management endpoints
+  - name: Transactions
+    description: Transaction endpoints (deposit, withdraw, calculate)
+
+paths:
+  # ==========================================
+  # CUSTOMERS
+  # ==========================================
+  /customers:
+    get:
+      tags:
+        - Customers
+      summary: Get all customers
+      description: Retrieve paginated list of customers with search and sorting
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Items per page
+        - in: query
+          name: search
+          schema:
+            type: string
+          description: Search by customer name
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [name, created_at]
+            default: name
+          description: Sort field
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomerWithStats'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags:
+        - Customers
+      summary: Create new customer
+      description: Create a new customer record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 255
+                  example: Ahmad Abdullah
+      responses:
+        '201':
+          description: Customer created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+                  message:
+                    type: string
+                    example: Customer created successfully
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /customers/{id}:
+    get:
+      tags:
+        - Customers
+      summary: Get customer by ID
+      description: Retrieve customer details with all accounts
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Customer ID
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/CustomerDetail'
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    put:
+      tags:
+        - Customers
+      summary: Update customer
+      description: Update existing customer data
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 255
+                  example: John Doe Updated
+      responses:
+        '200':
+          description: Customer updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Customer'
+                  message:
+                    type: string
+                    example: Customer updated successfully
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    delete:
+      tags:
+        - Customers
+      summary: Delete customer
+      description: Delete customer (only if no active accounts)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Customer deleted successfully
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+        '409':
+          description: Cannot delete customer with existing accounts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: CUSTOMER_HAS_ACCOUNTS
+                      message:
+                        type: string
+                        example: Cannot delete customer with existing accounts
+                      details:
+                        type: object
+                        properties:
+                          customer_id:
+                            type: integer
+                            example: 1
+                          active_accounts:
+                            type: integer
+                            example: 2
+
+  # ==========================================
+  # DEPOSITO TYPES
+  # ==========================================
+  /deposito-types:
+    get:
+      tags:
+        - Deposito Types
+      summary: Get all deposito types
+      description: Retrieve all deposito types (master data)
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DepositoTypeWithStats'
+
+    post:
+      tags:
+        - Deposito Types
+      summary: Create deposito type
+      description: Create new deposito type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - yearly_return
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: Platinum
+                yearly_return:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                  maximum: 100
+                  example: 10.00
+      responses:
+        '201':
+          description: Deposito type created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DepositoTypeWithStats'
+                  message:
+                    type: string
+                    example: Deposito type created successfully
+        '409':
+          description: Duplicate deposito type name
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: DUPLICATE_DEPOSITO_NAME
+                      message:
+                        type: string
+                        example: Deposito type with name 'Gold' already exists
+
+  /deposito-types/{id}:
+    get:
+      tags:
+        - Deposito Types
+      summary: Get deposito type by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DepositoTypeWithStats'
+        '404':
+          description: Deposito type not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    put:
+      tags:
+        - Deposito Types
+      summary: Update deposito type
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - yearly_return
+              properties:
+                name:
+                  type: string
+                  maxLength: 100
+                  example: Gold Premium
+                yearly_return:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                  maximum: 100
+                  example: 7.50
+      responses:
+        '200':
+          description: Deposito type updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/DepositoTypeWithStats'
+                  message:
+                    type: string
+                    example: Deposito type updated successfully
+
+    delete:
+      tags:
+        - Deposito Types
+      summary: Delete deposito type
+      description: Delete deposito type (only if no accounts using it)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deposito type deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Deposito type deleted successfully
+        '409':
+          description: Deposito type in use
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: DEPOSITO_TYPE_IN_USE
+                      message:
+                        type: string
+                        example: Cannot delete deposito type with existing accounts
+                      details:
+                        type: object
+                        properties:
+                          deposito_type_id:
+                            type: integer
+                            example: 3
+                          active_accounts:
+                            type: integer
+                            example: 42
+
+  # ==========================================
+  # ACCOUNTS
+  # ==========================================
+  /accounts:
+    get:
+      tags:
+        - Accounts
+      summary: Get all accounts
+      description: Retrieve paginated list of accounts with filters
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: customer_id
+          schema:
+            type: integer
+          description: Filter by customer ID
+        - in: query
+          name: deposito_type_id
+          schema:
+            type: integer
+          description: Filter by deposito type ID
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [balance, created_at]
+            default: created_at
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AccountListItem'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+    post:
+      tags:
+        - Accounts
+      summary: Create new account
+      description: Open new account for customer with optional initial deposit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - customer_id
+                - deposito_type_id
+              properties:
+                customer_id:
+                  type: integer
+                  example: 1
+                deposito_type_id:
+                  type: integer
+                  example: 3
+                initial_balance:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  example: 50000000.00
+                initial_deposit_date:
+                  type: string
+                  format: date
+                  example: '2025-01-01'
+                  description: Required if initial_balance > 0
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AccountDetail'
+                  message:
+                    type: string
+                    example: Account created successfully
+
+  /accounts/{id}:
+    get:
+      tags:
+        - Accounts
+      summary: Get account detail
+      description: Retrieve account details with transaction history and statistics
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AccountDetail'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+    put:
+      tags:
+        - Accounts
+      summary: Update account
+      description: Update account (change deposito type only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deposito_type_id
+              properties:
+                deposito_type_id:
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: Account updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/AccountDetail'
+                  message:
+                    type: string
+                    example: Account updated successfully
+
+    delete:
+      tags:
+        - Accounts
+      summary: Delete account
+      description: Close account (only if balance is zero)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Account deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Account deleted successfully
+        '409':
+          description: Account has non-zero balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: ACCOUNT_HAS_BALANCE
+                      message:
+                        type: string
+                        example: Cannot delete account with non-zero balance
+                      details:
+                        type: object
+                        properties:
+                          account_id:
+                            type: integer
+                            example: 1
+                          current_balance:
+                            type: number
+                            example: 50000000.00
+
+  # ==========================================
+  # TRANSACTIONS
+  # ==========================================
+  /transactions:
+    get:
+      tags:
+        - Transactions
+      summary: Get all transactions
+      description: Retrieve paginated list of transactions with filters
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+        - in: query
+          name: account_id
+          schema:
+            type: integer
+          description: Filter by account ID
+        - in: query
+          name: type
+          schema:
+            type: string
+            enum: [deposit, withdraw]
+          description: Filter by transaction type
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date
+          description: Date range start
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date
+          description: Date range end
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [transaction_date, created_at]
+            default: transaction_date
+        - in: query
+          name: order
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Transaction'
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /transactions/deposit:
+    post:
+      tags:
+        - Transactions
+      summary: Deposit money
+      description: Deposit money to account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - amount
+                - transaction_date
+              properties:
+                account_id:
+                  type: integer
+                  example: 1
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0.01
+                  example: 10000000.00
+                transaction_date:
+                  type: string
+                  format: date
+                  example: '2025-11-22'
+                  description: Cannot be future date
+                notes:
+                  type: string
+                  maxLength: 500
+                  example: Monthly deposit
+      responses:
+        '201':
+          description: Deposit successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      account:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          balance:
+                            type: number
+                            example: 60000000.00
+                  message:
+                    type: string
+                    example: Deposit successful
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+
+  /transactions/calculate-withdrawal:
+    post:
+      tags:
+        - Transactions
+      summary: Calculate withdrawal preview
+      description: |
+        Calculate ending balance before actual withdrawal (CRITICAL ENDPOINT).
+        This shows the user how much they will receive including interest.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - withdrawal_date
+              properties:
+                account_id:
+                  type: integer
+                  example: 1
+                withdrawal_date:
+                  type: string
+                  format: date
+                  example: '2025-11-22'
+      responses:
+        '200':
+          description: Calculation successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/WithdrawalCalculation'
+                  message:
+                    type: string
+                    example: If you withdraw on 2025-11-22, you will receive Rp 53,120,833.33
+        '422':
+          description: Cannot calculate withdrawal
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: NO_DEPOSITS_FOUND
+                      message:
+                        type: string
+                        example: Account has no deposits yet. Cannot calculate withdrawal.
+                      details:
+                        type: object
+                        properties:
+                          account_id:
+                            type: integer
+                            example: 1
+                          current_balance:
+                            type: number
+                            example: 0.00
+
+  /transactions/withdraw:
+    post:
+      tags:
+        - Transactions
+      summary: Withdraw money
+      description: |
+        Withdraw money from account with automatic interest calculation.
+        Account balance will be set to 0 after withdrawal.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - account_id
+                - withdrawal_date
+              properties:
+                account_id:
+                  type: integer
+                  example: 1
+                withdrawal_date:
+                  type: string
+                  format: date
+                  example: '2025-11-22'
+                  description: Must be >= first deposit date
+                notes:
+                  type: string
+                  maxLength: 500
+                  example: Account closure
+      responses:
+        '201':
+          description: Withdrawal successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      transaction:
+                        $ref: '#/components/schemas/Transaction'
+                      account:
+                        type: object
+                        properties:
+                          id:
+                            type: integer
+                            example: 1
+                          balance:
+                            type: number
+                            example: 0.00
+                      calculation_details:
+                        $ref: '#/components/schemas/CalculationDetails'
+                  message:
+                    type: string
+                    example: 'Withdrawal successful. Total amount: Rp 53,120,833.33'
+        '400':
+          description: Insufficient balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: INSUFFICIENT_BALANCE
+                      message:
+                        type: string
+                        example: Account balance is zero. Nothing to withdraw.
+        '422':
+          description: Invalid withdrawal date
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: INVALID_WITHDRAWAL_DATE
+                      message:
+                        type: string
+                        example: Withdrawal date cannot be before first deposit date
+                      details:
+                        type: object
+                        properties:
+                          first_deposit_date:
+                            type: string
+                            example: '2025-01-01'
+                          withdrawal_date:
+                            type: string
+                            example: '2024-12-01'
+
+# ==========================================
+# COMPONENTS
+# ==========================================
+components:
+  schemas:
+    Customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: John Doe
+        created_at:
+          type: string
+          format: date-time
+          example: '2025-01-01T00:00:00.000Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2025-01-01T00:00:00.000Z'
+
+    CustomerWithStats:
+      allOf:
+        - $ref: '#/components/schemas/Customer'
+        - type: object
+          properties:
+            total_accounts:
+              type: integer
+              example: 2
+            total_balance:
+              type: number
+              format: decimal
+              example: 70000000.00
+
+    CustomerDetail:
+      allOf:
+        - $ref: '#/components/schemas/Customer'
+        - type: object
+          properties:
+            accounts:
+              type: array
+              items:
+                $ref: '#/components/schemas/AccountListItem'
+            total_accounts:
+              type: integer
+              example: 2
+            total_balance:
+              type: number
+              example: 70000000.00
+
+    DepositoType:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        name:
+          type: string
+          example: Gold
+        yearly_return:
+          type: number
+          format: decimal
+          example: 7.00
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DepositoTypeWithStats:
+      allOf:
+        - $ref: '#/components/schemas/DepositoType'
+        - type: object
+          properties:
+            monthly_return:
+              type: number
+              format: decimal
+              example: 0.5833
+              description: Auto-calculated (yearly_return / 12)
+            total_accounts:
+              type: integer
+              example: 42
+
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        customer_id:
+          type: integer
+          example: 1
+        deposito_type_id:
+          type: integer
+          example: 3
+        balance:
+          type: number
+          format: decimal
+          example: 50000000.00
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AccountListItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        customer:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: John Doe
+        deposito_type:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 3
+            name:
+              type: string
+              example: Gold
+            yearly_return:
+              type: number
+              example: 7.00
+            monthly_return:
+              type: number
+              example: 0.5833
+        balance:
+          type: number
+          example: 50000000.00
+        last_transaction_date:
+          type: string
+          format: date
+          example: '2025-01-01'
+        transaction_count:
+          type: integer
+          example: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AccountDetail:
+      allOf:
+        - $ref: '#/components/schemas/AccountListItem'
+        - type: object
+          properties:
+            statistics:
+              type: object
+              properties:
+                total_deposits:
+                  type: number
+                  example: 50000000.00
+                total_withdrawals:
+                  type: number
+                  example: 0.00
+                transaction_count:
+                  type: integer
+                  example: 1
+                first_deposit_date:
+                  type: string
+                  format: date
+                  example: '2025-01-01'
+                last_transaction_date:
+                  type: string
+                  format: date
+                  example: '2025-01-01'
+            transactions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Transaction'
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        account_id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          enum: [deposit, withdraw]
+          example: deposit
+        amount:
+          type: number
+          format: decimal
+          example: 50000000.00
+        transaction_date:
+          type: string
+          format: date
+          example: '2025-01-01'
+        balance_before:
+          type: number
+          example: 0.00
+        balance_after:
+          type: number
+          example: 50000000.00
+        months_duration:
+          type: number
+          format: decimal
+          nullable: true
+          example: null
+          description: Only for withdraw transactions
+        interest_earned:
+          type: number
+          format: decimal
+          nullable: true
+          example: null
+          description: Only for withdraw transactions
+        notes:
+          type: string
+          nullable: true
+          example: null
+        created_at:
+          type: string
+          format: date-time
+
+    WithdrawalCalculation:
+      type: object
+      properties:
+        account_id:
+          type: integer
+          example: 1
+        customer_name:
+          type: string
+          example: John Doe
+        deposito_type:
+          type: object
+          properties:
+            name:
+              type: string
+              example: Gold
+            yearly_return:
+              type: number
+              example: 7.00
+            monthly_return:
+              type: number
+              example: 0.5833
+        calculation:
+          $ref: '#/components/schemas/CalculationDetails'
+
+    CalculationDetails:
+      type: object
+      properties:
+        starting_balance:
+          type: number
+          example: 50000000.00
+        first_deposit_date:
+          type: string
+          format: date
+          example: '2025-01-01'
+        withdrawal_date:
+          type: string
+          format: date
+          example: '2025-11-22'
+        duration:
+          type: object
+          properties:
+            months:
+              type: integer
+              example: 10
+            days:
+              type: integer
+              example: 21
+            total_months_decimal:
+              type: number
+              example: 10.70
+        monthly_return_rate:
+          type: number
+          example: 0.005833
+          description: Decimal format (0.5833% = 0.005833)
+        interest_earned:
+          type: number
+          example: 3120833.33
+        ending_balance:
+          type: number
+          example: 53120833.33
+        formula_used:
+          type: string
+          example: 'ending_balance = starting_balance × (1 + monthly_return × months)'
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page:
+          type: integer
+          example: 1
+        per_page:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 50
+        total_pages:
+          type: integer
+          example: 5
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              example:
+                name:
+                  - Name is required
+                  - Name must be at least 2 characters
+
+    NotFoundError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: CUSTOMER_NOT_FOUND
+            message:
+              type: string
+              example: Customer with ID 999 not found
