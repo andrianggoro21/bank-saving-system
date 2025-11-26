@@ -106,8 +106,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({ onSubmit }) =>
     try {
       setLoading(true);
       const submitData: CreateTransactionDTO = {
-        accountId: Number(formData.accountId),
-        type: formData.type,
+        accountId: formData.accountId,
+        type: formData.type as 'deposit' | 'withdraw' | 'interest',
         amount: Number(formData.amount),
         transactionDate: formData.transactionDate,
         monthsDuration: formData.monthsDuration ? Number(formData.monthsDuration) : undefined,

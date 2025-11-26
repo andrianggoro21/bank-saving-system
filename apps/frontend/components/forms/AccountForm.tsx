@@ -87,8 +87,8 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSubmit, isE
     try {
       setLoading(true);
       const submitData = {
-        customerId: Number(formData.customerId),
-        depositoTypeId: Number(formData.depositoTypeId),
+        customerId: formData.customerId,
+        depositoTypeId: formData.depositoTypeId,
         balance: Number(formData.balance),
       };
       await onSubmit(submitData);
