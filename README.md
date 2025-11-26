@@ -476,8 +476,4 @@ MIT
 
 ## 👤 Author
 
-Engineering Test - Belimbing.ai
-
----
-
-**Note:** This is a test project for Belimbing.ai engineering assessment.
+Bank Saving System
